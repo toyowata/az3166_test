@@ -1,0 +1,12 @@
+{
+    "AZ3166": {
+        "inherits": ["MTB_MXCHIP_EMW3166"],
+        "supported_toolchains": ["ARM", "GCC_ARM"],
+        "is_disk_virtual": true,
+        "release_versions": ["5"],
+        "overrides": {
+            "network-default-interface-type": "WIFI"
+        },
+        "detect_code": ["0670"]
+    }
+}
