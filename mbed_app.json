@@ -2,11 +2,11 @@
     "config": {
         "wifi-ssid": {
             "help": "WiFi SSID",
-            "value": "\"Buffalo-G-C42E\""
+            "value": "\"SSID\""
         },
         "wifi-password": {
             "help": "WiFi Password",
-            "value": "\"issvsunfx8te3\""
+            "value": "\"PASSWORD\""
         }
     },
     "target_overrides": {
