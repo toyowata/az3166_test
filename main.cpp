@@ -15,6 +15,10 @@
  */
 
 #include "mbed.h"
+#include "HTS221Sensor.h"
+#include "LPS22HBSensor.h"
+#include "lis3mdl_class.h"
+#include "LSM6DSLSensor.h"
 
 DigitalOut LED_USER(LED1, 0);
 DigitalOut LED_AZURE(LED2, 0);
@@ -27,6 +31,12 @@ DigitalOut LED_B(LED_BLUE, 0);
 InterruptIn button_a(USER_BUTTON_A);
 InterruptIn button_b(USER_BUTTON_B);
 
+DevI2C devI2c(I2C_SDA, I2C_SCL);
+HTS221Sensor hum_temp(&devI2c);
+LPS22HBSensor press_temp(&devI2c, LPS22HB_ADDRESS_LOW);
+LIS3MDL magnetometer(&devI2c, LIS3MDL_M_MEMS_ADDRESS_LOW);
+LSM6DSLSensor acc_gyro(&devI2c, LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW); // low address
+
 EventQueue queue;
 WiFiInterface *wifi;
 
@@ -36,7 +46,28 @@ void button_b_handler(void);
 
 void idle_handler()
 {
+    float value1, value2;
+    int32_t axes[3];
+
     LED_R = !LED_R;
+    hum_temp.get_temperature(&value1);
+    hum_temp.get_humidity(&value2);
+    printf("HTS221:  [temp] %.2f C, [hum]   %.2f%%\r\n", value1, value2);
+
+    press_temp.get_temperature(&value1);
+    press_temp.get_pressure(&value2);
+    printf("LPS22HB: [temp] %.2f C, [press] %.2f mbar\r\n", value1, value2);
+
+    magnetometer.get_m_axes(axes);
+    printf("LIS3MDL [mag/mgauss]:    %6ld, %6ld, %6ld\r\n", axes[0], axes[1], axes[2]);
+
+    acc_gyro.get_x_axes(axes);
+    printf("LSM6DSL [acc/mg]:        %6ld, %6ld, %6ld\r\n", axes[0], axes[1], axes[2]);
+ 
+    acc_gyro.get_g_axes(axes);
+    printf("LSM6DSL [gyro/mdps]:     %6ld, %6ld, %6ld\r\n", axes[0], axes[1], axes[2]);
+
+    printf("\n");
 }
 
 void button_a_handler() 
@@ -151,7 +182,29 @@ int main()
     button_b.mode(PullUp);
     button_b.fall(queue.event(button_b_handler));
 
-    queue.call_every(500, idle_handler);
+    uint8_t id;
+    hum_temp.init(NULL);
+    hum_temp.enable();
+    hum_temp.read_id(&id);
+    printf("HTS221  humidity & temperature    = 0x%X\r\n", id);
+
+    press_temp.init(NULL);
+    press_temp.enable();
+    press_temp.read_id(&id);
+    printf("LPS22HB pressure & temperature    = 0x%X\r\n", id);
+
+    magnetometer.init(NULL);
+    //magnetometer.enable();
+    magnetometer.read_id(&id);
+    printf("LIS3MDL magnetometer              = 0x%X\r\n", id);
+
+    acc_gyro.init(NULL);
+    acc_gyro.enable_g();acc_gyro.enable_x();
+    acc_gyro.enable_g();
+    acc_gyro.read_id(&id);
+    printf("LSM6DSL accelerometer & gyroscope = 0x%X\r\n", id);
+    
+    queue.call_every(2000, idle_handler);
 
     queue.dispatch();
 
