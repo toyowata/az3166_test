@@ -4,6 +4,9 @@
         "supported_toolchains": ["ARM", "GCC_ARM"],
         "is_disk_virtual": true,
         "release_versions": ["5"],
+        "device_has_add": ["QSPI"],
+        "components_add": ["QSPIF", "FLASHIAP"],
+        "extra_labels_add": ["MX25R6435F"],
         "overrides": {
             "network-default-interface-type": "WIFI"
         },

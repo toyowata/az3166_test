@@ -15,6 +15,8 @@
  */
 
 #include "mbed.h"
+//#ifndef MBED_TEST_MODE
+#if 0
 
 DigitalOut LED_USER(LED1, 0);
 DigitalOut LED_AZURE(LED2, 0);
@@ -26,6 +28,10 @@ DigitalOut LED_B(LED_BLUE, 0);
 
 InterruptIn button_a(USER_BUTTON_A);
 InterruptIn button_b(USER_BUTTON_B);
+
+// I2C OLDE 128x64
+// PB_8 - SCL
+// PB_9 - SDA
 
 EventQueue queue;
 WiFiInterface *wifi;
@@ -107,7 +113,7 @@ int scan_demo(WiFiInterface *wifi)
 int main()
 {
     printf("\nIoT DevKit AZ3166 Wi-Fi example\n");
-
+    
 #ifdef MBED_MAJOR_VERSION
     printf("Mbed OS version %d.%d.%d\n\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
 #endif
@@ -156,3 +162,40 @@ int main()
     queue.dispatch();
 
 }
+
+#else
+
+#include "mbed.h"
+#include "QSPIFBlockDevice.h"
+
+QSPIFBlockDevice block_device(QSPI_FLASH1_IO0, QSPI_FLASH1_IO1, QSPI_FLASH1_IO2, QSPI_FLASH1_IO3,
+                              QSPI_FLASH1_SCK, QSPI_FLASH1_CSN, QSPIF_POLARITY_MODE_0, MBED_CONF_QSPIF_QSPI_FREQ);
+
+int main()
+{
+    printf("QSPI SFDP Flash Block Device example\n");
+
+    // Initialize the SPI flash device and print the memory layout
+    block_device.init();
+    bd_size_t sector_size_at_address_0 = block_device.get_erase_size(0);
+
+    printf("QSPIF BD size: %llu\n",         block_device.size());
+    printf("QSPIF BD read size: %llu\n",    block_device.get_read_size());
+    printf("QSPIF BD program size: %llu\n", block_device.get_program_size());
+    printf("QSPIF BD erase size (at address 0): %llu\n", sector_size_at_address_0);
+
+    // Write "Hello World!" to the first block
+    char *buffer = (char *) malloc(sector_size_at_address_0);
+    sprintf(buffer, "Hello World!\n");
+    block_device.erase(0, sector_size_at_address_0);
+    block_device.program(buffer, 0, sector_size_at_address_0);
+
+    // Read back what was stored
+    block_device.read(buffer, 0, sector_size_at_address_0);
+    printf("%s", buffer);
+
+    // Deinitialize the device
+    block_device.deinit();
+    printf("Test finished.\n");
+}
+#endif

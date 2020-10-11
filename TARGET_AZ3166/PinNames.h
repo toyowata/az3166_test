@@ -278,6 +278,13 @@ typedef enum {
     PB10          = LED2,
     PB2           = LED1,
 
+    QSPI_FLASH1_CSN = PC_11,
+    QSPI_FLASH1_IO0 = PA_6,
+    QSPI_FLASH1_IO1 = PA_7,
+    QSPI_FLASH1_IO2 = PC_4,
+    QSPI_FLASH1_IO3 = PC_5,
+    QSPI_FLASH1_SCK = PB_1,
+
 } PinName;
 
 #ifdef __cplusplus

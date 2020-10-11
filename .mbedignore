@@ -1,0 +1,2 @@
+mbed-os/targets/TARGET_STM/qspi_api.c 
+mbed-os/targets/TARGET_STM/TARGET_STM32F4/TARGET_STM32F412xG/TARGET_MTB_MXCHIP_EMW3166/PeripheralPins.c
