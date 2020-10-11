@@ -17,7 +17,7 @@
 #include "mbed.h"
 #include "HTS221Sensor.h"
 #include "LPS22HBSensor.h"
-#include "lis3mdl_class.h"
+#include "LIS2MDLSensor.h"
 #include "LSM6DSLSensor.h"
 
 DigitalOut LED_USER(LED1, 0);
@@ -34,7 +34,7 @@ InterruptIn button_b(USER_BUTTON_B);
 DevI2C devI2c(I2C_SDA, I2C_SCL);
 HTS221Sensor hum_temp(&devI2c);
 LPS22HBSensor press_temp(&devI2c, LPS22HB_ADDRESS_LOW);
-LIS3MDL magnetometer(&devI2c, LIS3MDL_M_MEMS_ADDRESS_LOW);
+LIS2MDLSensor magnetometer(&devI2c);
 LSM6DSLSensor acc_gyro(&devI2c, LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW); // low address
 
 EventQueue queue;
@@ -194,7 +194,7 @@ int main()
     printf("LPS22HB pressure & temperature    = 0x%X\r\n", id);
 
     magnetometer.init(NULL);
-    //magnetometer.enable();
+    magnetometer.enable();
     magnetometer.read_id(&id);
     printf("LIS3MDL magnetometer              = 0x%X\r\n", id);
 
