@@ -1,4 +1,4 @@
-/* WiFi Example
+/* IoT DevKit AZ3166 example
  * Copyright (c) 2016-2020 ARM Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,12 @@
  */
 
 #include "mbed.h"
+#include "NTPClient.h"
 #include "HTS221Sensor.h"
 #include "LPS22HBSensor.h"
 #include "LIS2MDLSensor.h"
 #include "LSM6DSLSensor.h"
+#include "SSD1306.h"
 
 DigitalOut LED_USER(LED1, 0);
 DigitalOut LED_AZURE(LED2, 0);
@@ -35,10 +37,13 @@ DevI2C devI2c(I2C_SDA, I2C_SCL);
 HTS221Sensor hum_temp(&devI2c);
 LPS22HBSensor press_temp(&devI2c, LPS22HB_ADDRESS_LOW);
 LIS2MDLSensor magnetometer(&devI2c);
-LSM6DSLSensor acc_gyro(&devI2c, LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW); // low address
+LSM6DSLSensor acc_gyro(&devI2c, LSM6DSL_ACC_GYRO_I2C_ADDRESS_LOW);
+SSD1306 oled(&devI2c, (uint8_t)0x78);
 
 EventQueue queue;
 WiFiInterface *wifi;
+static int toggle = 0;
+time_t now;
 
 void idle_handler(void);
 void button_a_handler(void);
@@ -48,15 +53,27 @@ void idle_handler()
 {
     float value1, value2;
     int32_t axes[3];
+    char buf[16];
 
     LED_R = !LED_R;
+        
+    time(&now);
+    strftime(buf, sizeof(buf), "%Y/%m/%d %a", localtime(&now));
+    oled.writeString(0, 0, buf);
+    strftime(buf, sizeof(buf), "%H:%M:%S", localtime(&now));
+    oled.writeString(1, 0, buf);
+
     hum_temp.get_temperature(&value1);
     hum_temp.get_humidity(&value2);
     printf("HTS221:  [temp] %.2f C, [hum]   %.2f%%\r\n", value1, value2);
+    sprintf(buf, "%.2f C, %.2f%%", value1, value2);
+    oled.writeString(2, 0, buf);
 
     press_temp.get_temperature(&value1);
     press_temp.get_pressure(&value2);
     printf("LPS22HB: [temp] %.2f C, [press] %.2f mbar\r\n", value1, value2);
+    sprintf(buf, "%.2f hPa", value2);
+    oled.writeString(3, 0, buf);
 
     magnetometer.get_m_axes(axes);
     printf("LIS3MDL [mag/mgauss]:    %6ld, %6ld, %6ld\r\n", axes[0], axes[1], axes[2]);
@@ -68,11 +85,48 @@ void idle_handler()
     printf("LSM6DSL [gyro/mdps]:     %6ld, %6ld, %6ld\r\n", axes[0], axes[1], axes[2]);
 
     printf("\n");
+
+    switch (toggle) {
+        case 0:
+            magnetometer.get_m_axes(axes);
+            sprintf(buf, "[mag x] %6ld", axes[0]);
+            oled.writeString(5, 0, buf);
+            sprintf(buf, "[mag y] %6ld", axes[1]);
+            oled.writeString(6, 0, buf);
+            sprintf(buf, "[mag z] %6ld", axes[1]);
+            oled.writeString(7, 0, buf);
+            break;
+        case 1:
+            acc_gyro.get_x_axes(axes);
+            sprintf(buf, "[acc x] %6ld", axes[0]);
+            oled.writeString(5, 0, buf);
+            sprintf(buf, "[acc y] %6ld", axes[1]);
+            oled.writeString(6, 0, buf);
+            sprintf(buf, "[acc z] %6ld", axes[1]);
+            oled.writeString(7, 0, buf);
+            break;
+        case 2:
+            acc_gyro.get_g_axes(axes);
+            sprintf(buf, "[gyro x] %6ld", axes[0]);
+            oled.writeString(5, 0, buf);
+            sprintf(buf, "[gyro y] %6ld", axes[1]);
+            oled.writeString(6, 0, buf);
+            sprintf(buf, "[gyro z] %6ld", axes[1]);
+            oled.writeString(7, 0, buf);
+            break;
+        default:
+            break;
+    }
 }
 
 void button_a_handler() 
 {
     LED_G = !LED_G;
+
+    toggle++;
+    if (toggle > 2) {
+        toggle = 0;
+    }
 }
 
 void button_b_handler() 
@@ -135,9 +189,23 @@ int scan_demo(WiFiInterface *wifi)
     return count;
 }
 
+void rtc_demo(NetworkInterface *network)
+{
+        // sync the real time clock (RTC)
+    NTPClient ntp(network);
+    const char* serverAddress = "time.google.com";
+    int port = 123;
+    ntp.set_server(const_cast<char *>(serverAddress), port);
+    now = ntp.get_timestamp();
+    now += (3600 * 9); // Adjust to JST timezone
+    set_time(now);
+    printf("Time is now %s", ctime(&now));
+}
+
 int main()
 {
     printf("\nIoT DevKit AZ3166 Wi-Fi example\n");
+    oled.writeString(0, 0, "[AZ3166 demo]");
 
 #ifdef MBED_MAJOR_VERSION
     printf("Mbed OS version %d.%d.%d\n\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
@@ -173,6 +241,8 @@ int main()
     printf("Gateway: %s\n", a.get_ip_address());
     printf("RSSI: %d\n\n", wifi->get_rssi());
 
+    rtc_demo((NetworkInterface *)wifi);
+
     wifi->disconnect();
     printf("\nDone\n");
     LED_WIFI = 0;
@@ -203,6 +273,8 @@ int main()
     acc_gyro.enable_g();
     acc_gyro.read_id(&id);
     printf("LSM6DSL accelerometer & gyroscope = 0x%X\r\n", id);
+
+    printf("\n");
     
     queue.call_every(2000, idle_handler);
 
